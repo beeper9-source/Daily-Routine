@@ -1,0 +1,47 @@
+{
+  "routines": [
+    {
+      "id": 1758583317745,
+      "name": "ebs 중국어",
+      "time": "08:21",
+      "category": "morning",
+      "completed": false,
+      "createdAt": "2025-09-22T23:21:57.745Z"
+    },
+    {
+      "id": 1758583350691,
+      "name": "Writing Diary",
+      "time": "08:22",
+      "category": "morning",
+      "completed": false,
+      "createdAt": "2025-09-22T23:22:30.691Z"
+    },
+    {
+      "id": 1758583362032,
+      "name": "약먹기",
+      "time": "08:22",
+      "category": "morning",
+      "completed": true,
+      "createdAt": "2025-09-22T23:22:42.032Z"
+    },
+    {
+      "id": 1758583732228,
+      "name": "커서AI로 개발하기",
+      "time": "08:28",
+      "category": "morning",
+      "completed": false,
+      "createdAt": "2025-09-22T23:28:52.228Z"
+    },
+    {
+      "id": 1758584399569,
+      "name": "테스트",
+      "time": "08:39",
+      "category": "morning",
+      "completed": false,
+      "createdAt": "2025-09-22T23:39:59.569Z"
+    }
+  ],
+  "lastSaved": "2025-09-22T23:39:59.569Z",
+  "version": "1.0",
+  "autoSave": true
+}

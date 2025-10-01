@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>일상 루틴 관리</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📅 일상 루틴 관리</h1>
+            <div class="date-display">
+                <span id="current-date"></span>
+            </div>
+        </header>
+
+        <main>
+            <!-- 통계 섹션 -->
+            <section class="stats-section">
+                <h2>📊 오늘의 통계</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number" id="total-routines">0</div>
+                        <div class="stat-label">총 루틴</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="completed-routines">0</div>
+                        <div class="stat-label">완료된 루틴</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="completion-rate">0%</div>
+                        <div class="stat-label">완료율</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 메모 섹션 -->
+            <section class="memo-section">
+                <h2>📝 오늘의 메모</h2>
+                <div class="memo-container">
+                    <textarea 
+                        id="daily-memo" 
+                        placeholder="오늘의 메모를 작성해보세요..."
+                        rows="3"
+                    ></textarea>
+                    <div class="memo-actions">
+                        <button class="btn btn-save-memo" onclick="routineManager.saveMemo()">
+                            💾 저장
+                        </button>
+                        <button class="btn btn-clear-memo" onclick="routineManager.clearMemo()">
+                            🗑️ 지우기
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 루틴 목록 섹션 -->
+            <section class="routines-section">
+                <h2>오늘의 루틴</h2>
+                <div class="routines-container" id="routines-container">
+                    <!-- 루틴들이 여기에 동적으로 추가됩니다 -->
+                </div>
+            </section>
+
+            <!-- 새 루틴 추가 섹션 -->
+            <section class="add-routine-section">
+                <h2>새 루틴 추가</h2>
+                <form id="routine-form">
+                    <div class="form-group">
+                        <input type="text" id="routine-name" placeholder="루틴 이름을 입력하세요" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="time" id="routine-time" required>
+                    </div>
+                    <div class="form-group">
+                        <select id="routine-category">
+                            <option value="morning">🌅 아침</option>
+                            <option value="work">💼 업무</option>
+                            <option value="exercise">🏃 운동</option>
+                            <option value="study">📚 공부</option>
+                            <option value="evening">🌙 저녁</option>
+                            <option value="other">기타</option>
+                        </select>
+                    </div>
+                    <button type="submit">루틴 추가</button>
+                </form>
+            </section>
+
+            <!-- 파일 관리 섹션 -->
+            <section class="file-management-section">
+                <h2>💾 파일 관리</h2>
+                <div class="file-buttons">
+                    <button class="btn btn-export" onclick="routineManager.exportToFile()">
+                        📤 JSON 파일로 내보내기
+                    </button>
+                    <button class="btn btn-import" onclick="document.getElementById('file-input').click()">
+                        📥 JSON 파일 가져오기
+                    </button>
+                    <button class="btn btn-autosave" id="autosave-toggle" onclick="routineManager.toggleAutoSave()">
+                        🔄 자동 저장 켜기
+                    </button>
+                    <button class="btn btn-manual-save" onclick="routineManager.manualSave()">
+                        💾 수동 저장
+                    </button>
+                    <input type="file" id="file-input" accept=".json" style="display: none;" onchange="routineManager.importFromFile(event)">
+                </div>
+                <div class="file-info">
+                    <p>💡 <strong>팁:</strong> 루틴 데이터를 JSON 파일로 백업하거나 다른 기기로 옮길 수 있습니다.</p>
+                    <p id="autosave-status" class="autosave-status">자동 업데이트: 비활성화</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
