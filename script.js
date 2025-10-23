@@ -120,9 +120,9 @@ class RoutineManager {
                 .from('routines')
                 .insert([
                     {
-                        name,
-                        time,
-                        category,
+            name,
+            time,
+            category,
                         completed: false
                     }
                 ])
@@ -136,9 +136,9 @@ class RoutineManager {
 
             // 로컬 배열에 추가
             this.routines.push(data[0]);
-            this.renderRoutines();
-            this.updateStats();
-            this.resetForm();
+        this.renderRoutines();
+        this.updateStats();
+        this.resetForm();
             this.showNotification('루틴이 성공적으로 추가되었습니다!', 'success');
         } catch (error) {
             console.error('루틴 추가 중 오류:', error);
@@ -202,9 +202,9 @@ class RoutineManager {
                     return;
                 }
 
-                this.routines = this.routines.filter(r => r.id !== routineId);
-                this.renderRoutines();
-                this.updateStats();
+            this.routines = this.routines.filter(r => r.id !== routineId);
+            this.renderRoutines();
+            this.updateStats();
                 this.showNotification('루틴이 성공적으로 삭제되었습니다!', 'success');
             } catch (error) {
                 console.error('루틴 삭제 중 오류:', error);
@@ -231,8 +231,8 @@ class RoutineManager {
                     return;
                 }
 
-                routine.name = newName.trim();
-                this.renderRoutines();
+            routine.name = newName.trim();
+            this.renderRoutines();
                 this.showNotification('루틴이 성공적으로 수정되었습니다!', 'success');
             } catch (error) {
                 console.error('루틴 수정 중 오류:', error);
@@ -285,7 +285,7 @@ class RoutineManager {
         };
 
         const isCompleted = routine.completed;
-        
+
         return `
             <div class="routine-card ${isCompleted ? 'completed' : ''}">
                 <div class="routine-header">
@@ -340,8 +340,8 @@ class RoutineManager {
                     code: error.code
                 });
                 this.showNotification(`루틴 로드 중 오류: ${error.message}`, 'error');
-                return;
-            }
+            return;
+        }
 
             console.log('루틴 로드 성공:', data);
             this.routines = data || [];
@@ -385,19 +385,19 @@ class RoutineManager {
             };
 
             const jsonString = JSON.stringify(data, null, 2);
-            
-            // 다운로드 방식으로 저장
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'daily-routines.json';
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+
+    // 다운로드 방식으로 저장
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'daily-routines.json';
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
             
             this.showNotification('파일이 성공적으로 내보내졌습니다!', 'success');
         } catch (error) {
@@ -525,7 +525,7 @@ class RoutineManager {
         const memoTextarea = document.getElementById('daily-memo');
         if (!memoTextarea) return;
 
-        this.memo = memoTextarea.value;
+            this.memo = memoTextarea.value;
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
         try {
@@ -594,7 +594,7 @@ class RoutineManager {
         const memoTextarea = document.getElementById('daily-memo');
         if (!memoTextarea) return;
 
-        this.memo = memoTextarea.value;
+            this.memo = memoTextarea.value;
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
         try {
@@ -900,6 +900,16 @@ class RoutineManager {
 
     // 알림 권한 상태 확인
     checkNotificationPermission() {
+        // iOS Safari 감지
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (isIOS && isSafari) {
+            // iOS Safari의 경우 특별 처리
+            this.updateNotificationStatus('ios-safari');
+            return;
+        }
+        
         if ('Notification' in window) {
             this.notificationPermission = Notification.permission;
             this.updateNotificationStatus();
@@ -910,6 +920,15 @@ class RoutineManager {
 
     // 알림 권한 요청
     async requestNotificationPermission() {
+        // iOS Safari 감지
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (isIOS && isSafari) {
+            this.showIOSNotificationGuide();
+            return;
+        }
+        
         if (!('Notification' in window)) {
             this.showNotification('이 브라우저는 알림을 지원하지 않습니다.', 'error');
             return;
@@ -983,6 +1002,10 @@ class RoutineManager {
                 statusElement.textContent = '알림 상태: 지원되지 않음 ❌';
                 statusElement.style.color = '#f56565';
                 break;
+            case 'ios-safari':
+                statusElement.textContent = '알림 상태: iOS Safari 감지됨 📱';
+                statusElement.style.color = '#4299e1';
+                break;
             default:
                 statusElement.textContent = '알림 상태: 확인 중...';
                 statusElement.style.color = '#718096';
@@ -991,8 +1014,23 @@ class RoutineManager {
 
     // 알림 체크 시작
     startNotificationCheck() {
-        if (!this.notificationsEnabled || this.notificationPermission !== 'granted') {
+        // iOS Safari 감지
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (!this.notificationsEnabled) {
             return;
+        }
+        
+        // iOS Safari에서는 권한 상태와 관계없이 체크 (PWA 설치 후 작동)
+        if (isIOS && isSafari) {
+            if (!this.notificationsEnabled) {
+                return;
+            }
+        } else {
+            if (this.notificationPermission !== 'granted') {
+                return;
+            }
         }
 
         // 기존 체크 중지
@@ -1044,17 +1082,38 @@ class RoutineManager {
 
     // 미완료 루틴 알림 전송
     sendIncompleteRoutineNotification(incompleteRoutines) {
-        if (this.notificationPermission !== 'granted') {
+        // iOS Safari 감지
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        const routineNames = incompleteRoutines.map(r => r.name).join(', ');
+        const message = `아직 완료하지 않은 루틴이 ${incompleteRoutines.length}개 있습니다: ${routineNames}`;
+
+        // iOS Safari에서는 다른 방식으로 알림 처리
+        if (isIOS && isSafari) {
+            // iOS에서는 브라우저 알림 대신 페이지 내 알림 사용
+            this.showNotification(`⏰ ${message}`, 'warning');
+            
+            // 진동 (iOS에서 지원되는 경우)
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200, 100, 200, 100, 200]);
+            }
+            
+            console.log('iOS Safari 미완료 루틴 알림:', message);
             return;
         }
 
-        const routineNames = incompleteRoutines.map(r => r.name).join(', ');
-        const message = `아직 완료하지 않은 루틴이 ${incompleteRoutines.length}개 있습니다: ${routineNames}`;
+        // 일반 브라우저에서의 알림
+        if (this.notificationPermission !== 'granted') {
+            // 권한이 없어도 페이지 내 알림은 표시
+            this.showNotification(`⏰ ${message}`, 'warning');
+            return;
+        }
 
         // 브라우저 알림
         const notification = new Notification('⏰ 루틴 알림', {
             body: message,
-            icon: '/favicon.ico', // 아이콘이 있다면
+            icon: '/favicon.ico',
             badge: '/favicon.ico',
             tag: 'routine-reminder',
             requireInteraction: true,
@@ -1063,7 +1122,7 @@ class RoutineManager {
 
         // 진동 (모바일에서 지원되는 경우)
         if ('vibrate' in navigator) {
-            navigator.vibrate([200, 100, 200, 100, 200]); // 진동 패턴
+            navigator.vibrate([200, 100, 200, 100, 200]);
         }
 
         // 알림 클릭 시 페이지 포커스
@@ -1082,6 +1141,29 @@ class RoutineManager {
 
     // 알림 테스트
     testNotification() {
+        // iOS Safari 감지
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+        
+        if (isIOS && isSafari) {
+            // iOS Safari에서는 바로 테스트 실행
+            const testRoutines = this.routines.filter(r => !r.completed);
+            
+            if (testRoutines.length === 0) {
+                const testRoutine = {
+                    id: 'test',
+                    name: '테스트 루틴',
+                    completed: false
+                };
+                this.sendIncompleteRoutineNotification([testRoutine]);
+            } else {
+                this.sendIncompleteRoutineNotification(testRoutines);
+            }
+            
+            this.showNotification('iOS Safari 테스트 알림을 전송했습니다!', 'success');
+            return;
+        }
+        
         if (this.notificationPermission !== 'granted') {
             this.showNotification('먼저 알림 권한을 허용해주세요.', 'warning');
             return;
@@ -1103,6 +1185,100 @@ class RoutineManager {
         }
 
         this.showNotification('테스트 알림을 전송했습니다!', 'success');
+    }
+
+    // iOS Safari 알림 설정 가이드 표시
+    showIOSNotificationGuide() {
+        // 기존 모달이 있다면 제거
+        const existingModal = document.querySelector('.ios-guide-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.className = 'ios-guide-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 400px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        `;
+
+        modalContent.innerHTML = `
+            <h2 style="margin-bottom: 20px; color: #333;">📱 iOS Safari 알림 설정</h2>
+            <div style="margin-bottom: 20px;">
+                <p style="color: #4a5568; line-height: 1.6; margin-bottom: 15px;">
+                    iOS Safari에서는 알림 권한을 수동으로 설정해야 합니다.
+                </p>
+                <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #4299e1;">
+                    <h3 style="margin: 0 0 10px 0; color: #2d3748;">설정 방법:</h3>
+                    <ol style="margin: 0; padding-left: 20px; color: #4a5568;">
+                        <li style="margin-bottom: 8px;">Safari 하단의 <strong>공유</strong> 버튼(⬆️) 탭</li>
+                        <li style="margin-bottom: 8px;"><strong>"홈 화면에 추가"</strong> 선택</li>
+                        <li style="margin-bottom: 8px;">홈 화면에 추가된 앱 아이콘 탭</li>
+                        <li style="margin-bottom: 8px;">앱에서 알림 권한 요청 시 <strong>"허용"</strong> 선택</li>
+                    </ol>
+                </div>
+                <p style="color: #718096; font-size: 0.9rem; margin-top: 15px;">
+                    또는 <strong>설정 > Safari > 알림</strong>에서 이 사이트의 알림을 허용할 수 있습니다.
+                </p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="this.closest('.ios-guide-modal').remove()" 
+                        style="background: #4299e1; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-right: 10px;">
+                    확인
+                </button>
+                <button onclick="routineManager.tryIOSNotification()" 
+                        style="background: #48bb78; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    다시 시도
+                </button>
+            </div>
+        `;
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // iOS에서 알림 재시도
+    tryIOSNotification() {
+        // 모달 닫기
+        const modal = document.querySelector('.ios-guide-modal');
+        if (modal) {
+            modal.remove();
+        }
+
+        // iOS에서도 Notification API가 작동할 수 있으므로 시도
+        if ('Notification' in window) {
+            this.requestNotificationPermission();
+        } else {
+            this.showNotification('iOS Safari에서는 PWA로 설치해야 알림을 사용할 수 있습니다.', 'warning');
+        }
     }
 
     // 하루가 지나면 루틴 초기화 (선택사항) - 이제 완료 상태는 별도 테이블에서 관리하므로 불필요
