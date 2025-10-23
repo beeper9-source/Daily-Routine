@@ -24,6 +24,13 @@ class RoutineManager {
         this.autoSaveInterval = null;
         this.lastSavedData = null;
         this.memo = '';
+        
+        // 알림 관련 속성
+        this.notificationsEnabled = false;
+        this.notificationPermission = 'default';
+        this.notificationCheckInterval = null;
+        this.lastNotificationDate = null;
+        
         this.init();
     }
 
@@ -60,6 +67,9 @@ class RoutineManager {
         this.bindEvents();
         this.updateAutoSaveButton(this.autoSaveEnabled);
         this.lastSavedData = JSON.stringify(this.routines);
+        
+        // 알림 초기화
+        this.initNotifications();
         
         // 매분마다 시간 업데이트
         setInterval(() => {
@@ -874,6 +884,227 @@ class RoutineManager {
         });
     }
 
+    // 알림 초기화
+    initNotifications() {
+        // 알림 권한 상태 확인
+        this.checkNotificationPermission();
+        
+        // 로컬 스토리지에서 알림 설정 로드
+        this.loadNotificationSettings();
+        
+        // 알림 체크 시작
+        this.startNotificationCheck();
+        
+        console.log('알림 시스템 초기화 완료');
+    }
+
+    // 알림 권한 상태 확인
+    checkNotificationPermission() {
+        if ('Notification' in window) {
+            this.notificationPermission = Notification.permission;
+            this.updateNotificationStatus();
+        } else {
+            this.updateNotificationStatus('not-supported');
+        }
+    }
+
+    // 알림 권한 요청
+    async requestNotificationPermission() {
+        if (!('Notification' in window)) {
+            this.showNotification('이 브라우저는 알림을 지원하지 않습니다.', 'error');
+            return;
+        }
+
+        try {
+            const permission = await Notification.requestPermission();
+            this.notificationPermission = permission;
+            this.updateNotificationStatus();
+            
+            if (permission === 'granted') {
+                this.showNotification('알림 권한이 허용되었습니다!', 'success');
+            } else if (permission === 'denied') {
+                this.showNotification('알림 권한이 거부되었습니다. 브라우저 설정에서 수동으로 허용해주세요.', 'warning');
+            }
+        } catch (error) {
+            console.error('알림 권한 요청 중 오류:', error);
+            this.showNotification('알림 권한 요청 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    // 알림 설정 토글
+    toggleNotifications() {
+        const checkbox = document.getElementById('notification-enabled');
+        this.notificationsEnabled = checkbox.checked;
+        
+        // 로컬 스토리지에 저장
+        localStorage.setItem('notifications-enabled', this.notificationsEnabled);
+        
+        if (this.notificationsEnabled) {
+            this.startNotificationCheck();
+            this.showNotification('오전 11시 알림이 활성화되었습니다.', 'success');
+        } else {
+            this.stopNotificationCheck();
+            this.showNotification('오전 11시 알림이 비활성화되었습니다.', 'warning');
+        }
+    }
+
+    // 알림 설정 로드
+    loadNotificationSettings() {
+        const saved = localStorage.getItem('notifications-enabled');
+        this.notificationsEnabled = saved === 'true';
+        
+        const checkbox = document.getElementById('notification-enabled');
+        if (checkbox) {
+            checkbox.checked = this.notificationsEnabled;
+        }
+    }
+
+    // 알림 상태 업데이트
+    updateNotificationStatus(status = null) {
+        const statusElement = document.getElementById('notification-status');
+        if (!statusElement) return;
+
+        const currentStatus = status || this.notificationPermission;
+        
+        switch (currentStatus) {
+            case 'granted':
+                statusElement.textContent = '알림 상태: 허용됨 ✅';
+                statusElement.style.color = '#48bb78';
+                break;
+            case 'denied':
+                statusElement.textContent = '알림 상태: 거부됨 ❌';
+                statusElement.style.color = '#f56565';
+                break;
+            case 'default':
+                statusElement.textContent = '알림 상태: 권한 요청 필요 ⚠️';
+                statusElement.style.color = '#ed8936';
+                break;
+            case 'not-supported':
+                statusElement.textContent = '알림 상태: 지원되지 않음 ❌';
+                statusElement.style.color = '#f56565';
+                break;
+            default:
+                statusElement.textContent = '알림 상태: 확인 중...';
+                statusElement.style.color = '#718096';
+        }
+    }
+
+    // 알림 체크 시작
+    startNotificationCheck() {
+        if (!this.notificationsEnabled || this.notificationPermission !== 'granted') {
+            return;
+        }
+
+        // 기존 체크 중지
+        this.stopNotificationCheck();
+
+        // 매분마다 체크
+        this.notificationCheckInterval = setInterval(() => {
+            this.checkForIncompleteRoutines();
+        }, 60000); // 1분마다 체크
+
+        console.log('알림 체크 시작됨');
+    }
+
+    // 알림 체크 중지
+    stopNotificationCheck() {
+        if (this.notificationCheckInterval) {
+            clearInterval(this.notificationCheckInterval);
+            this.notificationCheckInterval = null;
+            console.log('알림 체크 중지됨');
+        }
+    }
+
+    // 미완료 루틴 체크
+    checkForIncompleteRoutines() {
+        const now = new Date();
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTime = currentHour * 60 + currentMinute;
+        const targetTime = 11 * 60; // 오전 11시 = 660분
+
+        // 오전 11시가 지났는지 확인
+        if (currentTime >= targetTime) {
+            const today = now.toDateString();
+            
+            // 오늘 이미 알림을 보냈는지 확인
+            if (this.lastNotificationDate === today) {
+                return;
+            }
+
+            // 미완료 루틴 확인
+            const incompleteRoutines = this.routines.filter(routine => !routine.completed);
+            
+            if (incompleteRoutines.length > 0) {
+                this.sendIncompleteRoutineNotification(incompleteRoutines);
+                this.lastNotificationDate = today;
+            }
+        }
+    }
+
+    // 미완료 루틴 알림 전송
+    sendIncompleteRoutineNotification(incompleteRoutines) {
+        if (this.notificationPermission !== 'granted') {
+            return;
+        }
+
+        const routineNames = incompleteRoutines.map(r => r.name).join(', ');
+        const message = `아직 완료하지 않은 루틴이 ${incompleteRoutines.length}개 있습니다: ${routineNames}`;
+
+        // 브라우저 알림
+        const notification = new Notification('⏰ 루틴 알림', {
+            body: message,
+            icon: '/favicon.ico', // 아이콘이 있다면
+            badge: '/favicon.ico',
+            tag: 'routine-reminder',
+            requireInteraction: true,
+            silent: false
+        });
+
+        // 진동 (모바일에서 지원되는 경우)
+        if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200, 100, 200]); // 진동 패턴
+        }
+
+        // 알림 클릭 시 페이지 포커스
+        notification.onclick = () => {
+            window.focus();
+            notification.close();
+        };
+
+        // 5초 후 자동 닫기
+        setTimeout(() => {
+            notification.close();
+        }, 5000);
+
+        console.log('미완료 루틴 알림 전송:', message);
+    }
+
+    // 알림 테스트
+    testNotification() {
+        if (this.notificationPermission !== 'granted') {
+            this.showNotification('먼저 알림 권한을 허용해주세요.', 'warning');
+            return;
+        }
+
+        // 테스트용 미완료 루틴 생성
+        const testRoutines = this.routines.filter(r => !r.completed);
+        
+        if (testRoutines.length === 0) {
+            // 모든 루틴이 완료된 경우 테스트용 루틴 생성
+            const testRoutine = {
+                id: 'test',
+                name: '테스트 루틴',
+                completed: false
+            };
+            this.sendIncompleteRoutineNotification([testRoutine]);
+        } else {
+            this.sendIncompleteRoutineNotification(testRoutines);
+        }
+
+        this.showNotification('테스트 알림을 전송했습니다!', 'success');
+    }
+
     // 하루가 지나면 루틴 초기화 (선택사항) - 이제 완료 상태는 별도 테이블에서 관리하므로 불필요
     async checkNewDay() {
         const today = new Date().toDateString();
@@ -883,6 +1114,9 @@ class RoutineManager {
             localStorage.setItem('last-routine-check', today);
             // 완료 상태는 별도 테이블에서 관리하므로 초기화할 필요 없음
             console.log('새로운 하루가 시작되었습니다.');
+            
+            // 알림 날짜 초기화
+            this.lastNotificationDate = null;
         }
     }
 

@@ -95,6 +95,36 @@
                 </form>
             </section>
 
+            <!-- 알림 설정 섹션 -->
+            <section class="notification-section">
+                <h2>🔔 알림 설정</h2>
+                <div class="notification-settings">
+                    <div class="notification-item">
+                        <label class="notification-label">
+                            <input type="checkbox" id="notification-enabled" onchange="routineManager.toggleNotifications()">
+                            <span class="checkmark"></span>
+                            오전 11시 미완료 루틴 알림
+                        </label>
+                        <p class="notification-desc">오전 11시까지 완료하지 않은 루틴이 있으면 알림을 받습니다.</p>
+                    </div>
+                    <div class="notification-item">
+                        <button class="btn btn-notification" onclick="routineManager.requestNotificationPermission()">
+                            🔔 알림 권한 요청
+                        </button>
+                        <p class="notification-desc">브라우저 알림 권한을 허용해야 알림을 받을 수 있습니다.</p>
+                    </div>
+                    <div class="notification-item">
+                        <button class="btn btn-test" onclick="routineManager.testNotification()">
+                            🧪 알림 테스트
+                        </button>
+                        <p class="notification-desc">알림이 제대로 작동하는지 테스트해볼 수 있습니다.</p>
+                    </div>
+                </div>
+                <div class="notification-status">
+                    <p id="notification-status" class="notification-status-text">알림 상태: 확인 중...</p>
+                </div>
+            </section>
+
             <!-- 데이터 관리 섹션 -->
             <section class="file-management-section">
                 <h2>☁️ 데이터 관리</h2>
