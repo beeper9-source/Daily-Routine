@@ -510,6 +510,56 @@ button[type="submit"]:hover {
     transform: translateY(-1px);
 }
 
+.btn-history {
+    background: #9f7aea;
+    color: white;
+}
+
+.btn-history:hover {
+    background: #805ad5;
+    transform: translateY(-1px);
+}
+
+/* 통계 섹션 액션 버튼 */
+.stats-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.btn-stats {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.btn-stats:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+    .stats-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .btn-stats {
+        width: 100%;
+        max-width: 200px;
+    }
+}
+
 /* 통계 섹션 */
 .stats-grid {
     display: flex;

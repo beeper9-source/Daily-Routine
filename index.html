@@ -33,6 +33,14 @@
                         <div class="stat-label">완료율</div>
                     </div>
                 </div>
+                <div class="stats-actions">
+                    <button class="btn btn-stats" onclick="routineManager.showWeeklyStats()">
+                        📈 주간 통계
+                    </button>
+                    <button class="btn btn-stats" onclick="routineManager.showMonthlyStats()">
+                        📅 월간 통계
+                    </button>
+                </div>
             </section>
 
             <!-- 메모 섹션 -->
@@ -87,9 +95,9 @@
                 </form>
             </section>
 
-            <!-- 파일 관리 섹션 -->
+            <!-- 데이터 관리 섹션 -->
             <section class="file-management-section">
-                <h2>💾 파일 관리</h2>
+                <h2>☁️ 데이터 관리</h2>
                 <div class="file-buttons">
                     <button class="btn btn-export" onclick="routineManager.exportToFile()">
                         📤 JSON 파일로 내보내기
@@ -101,18 +109,20 @@
                         🔄 자동 저장 켜기
                     </button>
                     <button class="btn btn-manual-save" onclick="routineManager.manualSave()">
-                        💾 수동 저장
+                        💾 저장 상태 확인
                     </button>
                     <input type="file" id="file-input" accept=".json" style="display: none;" onchange="routineManager.importFromFile(event)">
                 </div>
                 <div class="file-info">
-                    <p>💡 <strong>팁:</strong> 루틴 데이터를 JSON 파일로 백업하거나 다른 기기로 옮길 수 있습니다.</p>
+                    <p>💡 <strong>팁:</strong> 모든 데이터는 Supabase 클라우드에 실시간으로 저장됩니다. JSON 파일로 백업하거나 다른 기기로 옮길 수 있습니다.</p>
                     <p id="autosave-status" class="autosave-status">자동 업데이트: 비활성화</p>
                 </div>
             </section>
         </main>
     </div>
 
+    <!-- Supabase 클라이언트 라이브러리 -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
 </body>
 </html>
