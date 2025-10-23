@@ -30,6 +30,11 @@ class RoutineManager {
         this.notificationPermission = 'default';
         this.notificationCheckInterval = null;
         this.lastNotificationDate = null;
+        this.notificationTimes = [
+            { hour: 11, minute: 0, label: '오전 11시' },    // 오전 11시
+            { hour: 13, minute: 30, label: '오후 1시 30분' } // 오후 1시 30분
+        ];
+        this.sentNotifications = new Set(); // 오늘 보낸 알림 시간 추적
         
         this.init();
     }
@@ -960,10 +965,10 @@ class RoutineManager {
         
         if (this.notificationsEnabled) {
             this.startNotificationCheck();
-            this.showNotification('오전 11시 알림이 활성화되었습니다.', 'success');
+            this.showNotification('미완료 루틴 알림이 활성화되었습니다. (오전 11시, 오후 1시 30분)', 'success');
         } else {
             this.stopNotificationCheck();
-            this.showNotification('오전 11시 알림이 비활성화되었습니다.', 'warning');
+            this.showNotification('미완료 루틴 알림이 비활성화되었습니다.', 'warning');
         }
     }
 
@@ -1059,35 +1064,42 @@ class RoutineManager {
         const currentHour = now.getHours();
         const currentMinute = now.getMinutes();
         const currentTime = currentHour * 60 + currentMinute;
-        const targetTime = 11 * 60; // 오전 11시 = 660분
+        const today = now.toDateString();
 
-        // 오전 11시가 지났는지 확인
-        if (currentTime >= targetTime) {
-            const today = now.toDateString();
+        // 각 알림 시간 확인
+        for (const notificationTime of this.notificationTimes) {
+            const targetTime = notificationTime.hour * 60 + notificationTime.minute;
             
-            // 오늘 이미 알림을 보냈는지 확인
-            if (this.lastNotificationDate === today) {
-                return;
-            }
+            // 해당 시간이 지났는지 확인
+            if (currentTime >= targetTime) {
+                const notificationKey = `${today}-${notificationTime.hour}-${notificationTime.minute}`;
+                
+                // 오늘 해당 시간에 이미 알림을 보냈는지 확인
+                if (this.sentNotifications.has(notificationKey)) {
+                    continue;
+                }
 
-            // 미완료 루틴 확인
-            const incompleteRoutines = this.routines.filter(routine => !routine.completed);
-            
-            if (incompleteRoutines.length > 0) {
-                this.sendIncompleteRoutineNotification(incompleteRoutines);
-                this.lastNotificationDate = today;
+                // 미완료 루틴 확인
+                const incompleteRoutines = this.routines.filter(routine => !routine.completed);
+                
+                if (incompleteRoutines.length > 0) {
+                    this.sendIncompleteRoutineNotification(incompleteRoutines, notificationTime.label);
+                    this.sentNotifications.add(notificationKey);
+                    console.log(`${notificationTime.label} 알림 전송됨`);
+                }
             }
         }
     }
 
     // 미완료 루틴 알림 전송
-    sendIncompleteRoutineNotification(incompleteRoutines) {
+    sendIncompleteRoutineNotification(incompleteRoutines, timeLabel = '') {
         // iOS Safari 감지
         const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
         const isSafari = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
         
         const routineNames = incompleteRoutines.map(r => r.name).join(', ');
-        const message = `아직 완료하지 않은 루틴이 ${incompleteRoutines.length}개 있습니다: ${routineNames}`;
+        const timePrefix = timeLabel ? `[${timeLabel}] ` : '';
+        const message = `${timePrefix}아직 완료하지 않은 루틴이 ${incompleteRoutines.length}개 있습니다: ${routineNames}`;
 
         // iOS Safari에서는 다른 방식으로 알림 처리
         if (isIOS && isSafari) {
@@ -1111,11 +1123,11 @@ class RoutineManager {
         }
 
         // 브라우저 알림
-        const notification = new Notification('⏰ 루틴 알림', {
+        const notification = new Notification(`⏰ 루틴 알림 ${timeLabel}`, {
             body: message,
             icon: '/favicon.ico',
             badge: '/favicon.ico',
-            tag: 'routine-reminder',
+            tag: `routine-reminder-${timeLabel}`,
             requireInteraction: true,
             silent: false
         });
@@ -1227,7 +1239,8 @@ class RoutineManager {
             <h2 style="margin-bottom: 20px; color: #333;">📱 iOS Safari 알림 설정</h2>
             <div style="margin-bottom: 20px;">
                 <p style="color: #4a5568; line-height: 1.6; margin-bottom: 15px;">
-                    iOS Safari에서는 알림 권한을 수동으로 설정해야 합니다.
+                    iOS Safari에서는 알림 권한을 수동으로 설정해야 합니다.<br>
+                    <strong>오전 11시와 오후 1시 30분</strong>에 미완료 루틴 알림을 받을 수 있습니다.
                 </p>
                 <div style="background: #f8fafc; padding: 15px; border-radius: 8px; border-left: 4px solid #4299e1;">
                     <h3 style="margin: 0 0 10px 0; color: #2d3748;">설정 방법:</h3>
@@ -1291,8 +1304,10 @@ class RoutineManager {
             // 완료 상태는 별도 테이블에서 관리하므로 초기화할 필요 없음
             console.log('새로운 하루가 시작되었습니다.');
             
-            // 알림 날짜 초기화
+            // 알림 추적 초기화
             this.lastNotificationDate = null;
+            this.sentNotifications.clear();
+            console.log('알림 추적이 초기화되었습니다.');
         }
     }
 
