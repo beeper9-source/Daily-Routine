@@ -160,33 +160,78 @@ class RoutineManager {
         if (!routine) return;
 
         const isCurrentlyCompleted = routine.completed;
+        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
 
         try {
-            // routines 테이블의 completed 필드 업데이트
-            const { error } = await this.supabase
-                .from('routines')
-                .update({ completed: !isCurrentlyCompleted })
-                .eq('id', routineId);
+            if (!isCurrentlyCompleted) {
+                // 루틴 완료 처리
+                // 1. routines 테이블의 completed 필드 업데이트
+                const { error: routineError } = await this.supabase
+                    .from('routines')
+                    .update({ completed: true })
+                    .eq('id', routineId);
 
-            if (error) {
-                console.error('루틴 상태 변경 중 오류:', error);
-                this.showNotification('루틴 상태 변경 중 오류가 발생했습니다.', 'error');
-                return;
-            }
+                if (routineError) {
+                    console.error('루틴 상태 변경 중 오류:', routineError);
+                    this.showNotification('루틴 상태 변경 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
 
-            // 로컬 상태 업데이트
-            routine.completed = !isCurrentlyCompleted;
-            
-            // Map 상태도 업데이트
-            if (routine.completed) {
-                this.routineCompletions.set(routineId, new Date().toISOString().split('T')[0]);
+                // 2. routine_completions 테이블에 완료 이력 추가
+                const { error: completionError } = await this.supabase
+                    .from('routine_completions')
+                    .insert({
+                        routine_id: routineId,
+                        completion_date: today,
+                        completed_at: new Date().toISOString(),
+                        notes: null
+                    });
+
+                if (completionError) {
+                    console.error('완료 이력 저장 중 오류:', completionError);
+                    // 이력 저장 실패해도 루틴 완료는 유지
+                }
+
+                // 로컬 상태 업데이트
+                routine.completed = true;
+                this.routineCompletions.set(routineId, today);
+                
+                this.showNotification('루틴이 완료되었습니다!', 'success');
             } else {
+                // 루틴 완료 취소 처리
+                // 1. routines 테이블의 completed 필드 업데이트
+                const { error: routineError } = await this.supabase
+                    .from('routines')
+                    .update({ completed: false })
+                    .eq('id', routineId);
+
+                if (routineError) {
+                    console.error('루틴 상태 변경 중 오류:', routineError);
+                    this.showNotification('루틴 상태 변경 중 오류가 발생했습니다.', 'error');
+                    return;
+                }
+
+                // 2. 오늘 날짜의 완료 이력 삭제
+                const { error: completionError } = await this.supabase
+                    .from('routine_completions')
+                    .delete()
+                    .eq('routine_id', routineId)
+                    .eq('completion_date', today);
+
+                if (completionError) {
+                    console.error('완료 이력 삭제 중 오류:', completionError);
+                    // 이력 삭제 실패해도 루틴 완료 취소는 유지
+                }
+
+                // 로컬 상태 업데이트
+                routine.completed = false;
                 this.routineCompletions.delete(routineId);
+                
+                this.showNotification('완료가 취소되었습니다.', 'warning');
             }
 
             this.renderRoutines();
             this.updateStats();
-            this.showNotification(routine.completed ? '루틴이 완료되었습니다!' : '완료가 취소되었습니다.', 'success');
         } catch (error) {
             console.error('루틴 상태 변경 중 오류:', error);
             this.showNotification('루틴 상태 변경 중 오류가 발생했습니다.', 'error');
@@ -311,7 +356,7 @@ class RoutineManager {
                         삭제
                     </button>
                     <button class="btn btn-history" onclick="routineManager.showRoutineHistory(${routine.id})">
-                        📊 이력
+                        📊 개별 이력
                     </button>
                 </div>
             </div>
@@ -358,25 +403,55 @@ class RoutineManager {
 
     async loadRoutineCompletions() {
         try {
-            // routines 테이블에서 completed 상태를 로드
+            // 오늘 날짜의 완료 이력을 로드
             console.log('루틴 완료 상태 로드 시작');
+            const today = new Date().toISOString().split('T')[0];
             
-            // 완료 상태를 Map에 저장 (routines 테이블의 completed 필드 사용)
+            // routine_completions 테이블에서 오늘 날짜의 완료 이력 조회
+            const { data, error } = await this.supabase
+                .from('routine_completions')
+                .select('routine_id')
+                .eq('completion_date', today);
+
+            if (error) {
+                console.error('완료 이력 로드 중 오류:', error);
+                // 오류가 발생해도 routines 테이블의 completed 상태를 사용
+                this.loadRoutineCompletionsFromRoutines();
+                return;
+            }
+
+            // 완료 상태를 Map에 저장
             this.routineCompletions.clear();
+            const completedRoutineIds = new Set(data.map(item => item.routine_id));
             
-            // routines가 이미 로드되어 있으므로 completed 상태를 Map에 저장
+            // routines 테이블의 completed 상태도 업데이트
             this.routines.forEach(routine => {
-                if (routine.completed) {
-                    this.routineCompletions.set(routine.id, new Date().toISOString().split('T')[0]);
+                const isCompleted = completedRoutineIds.has(routine.id);
+                routine.completed = isCompleted;
+                
+                if (isCompleted) {
+                    this.routineCompletions.set(routine.id, today);
                 }
             });
 
             console.log('루틴 완료 상태 로드 성공:', this.routineCompletions);
         } catch (error) {
             console.error('루틴 완료 상태 로드 중 예외:', error);
-            // 예외가 발생해도 빈 Map으로 초기화
-            this.routineCompletions.clear();
+            // 예외가 발생하면 routines 테이블의 completed 상태를 사용
+            this.loadRoutineCompletionsFromRoutines();
         }
+    }
+
+    // routines 테이블에서 완료 상태 로드 (fallback)
+    loadRoutineCompletionsFromRoutines() {
+        this.routineCompletions.clear();
+        const today = new Date().toISOString().split('T')[0];
+        
+        this.routines.forEach(routine => {
+            if (routine.completed) {
+                this.routineCompletions.set(routine.id, today);
+            }
+        });
     }
 
     // JSON 파일로 내보내기
@@ -648,6 +723,61 @@ class RoutineManager {
         }
     }
 
+    // 일자별 전체 루틴 이력 조회
+    async showDailyHistory() {
+        try {
+            // 최근 30일간의 모든 루틴 완료 이력 조회
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+
+            const { data, error } = await this.supabase
+                .from('routine_completions')
+                .select(`
+                    completion_date,
+                    completed_at,
+                    notes,
+                    routines!inner(name, category, time)
+                `)
+                .gte('completion_date', startDate)
+                .order('completion_date', { ascending: false });
+
+            if (error) {
+                console.error('일자별 이력 조회 중 오류:', error);
+                this.showNotification('일자별 이력 조회 중 오류가 발생했습니다.', 'error');
+                return;
+            }
+
+            // 일자별로 그룹화
+            const groupedData = this.groupHistoryByDate(data || []);
+            this.showDailyHistoryModal(groupedData);
+        } catch (error) {
+            console.error('일자별 이력 조회 중 예외:', error);
+            this.showNotification('일자별 이력 조회 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    // 이력을 날짜별로 그룹화
+    groupHistoryByDate(historyData) {
+        const grouped = {};
+        
+        historyData.forEach(item => {
+            const date = item.completion_date;
+            if (!grouped[date]) {
+                grouped[date] = [];
+            }
+            grouped[date].push(item);
+        });
+
+        // 날짜별로 정렬
+        return Object.keys(grouped)
+            .sort((a, b) => new Date(b) - new Date(a))
+            .reduce((result, date) => {
+                result[date] = grouped[date];
+                return result;
+            }, {});
+    }
+
     // 이력 모달 표시
     showHistoryModal(routineName, historyData) {
         // 기존 모달이 있다면 제거
@@ -721,6 +851,136 @@ class RoutineManager {
                 modal.remove();
             }
         });
+    }
+
+    // 일자별 이력 모달 표시
+    showDailyHistoryModal(groupedData) {
+        // 기존 모달이 있다면 제거
+        const existingModal = document.querySelector('.daily-history-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.className = 'daily-history-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        `;
+
+        // 통계 계산
+        const totalDays = Object.keys(groupedData).length;
+        const totalCompletions = Object.values(groupedData).reduce((sum, dayData) => sum + dayData.length, 0);
+        const averagePerDay = totalDays > 0 ? (totalCompletions / totalDays).toFixed(1) : 0;
+
+        // 일자별 이력 HTML 생성
+        const historyHTML = Object.entries(groupedData)
+            .map(([date, dayData]) => {
+                const dateObj = new Date(date);
+                const dayName = dateObj.toLocaleDateString('ko-KR', { weekday: 'short' });
+                const formattedDate = dateObj.toLocaleDateString('ko-KR');
+                
+                const routinesHTML = dayData
+                    .sort((a, b) => a.routines.time.localeCompare(b.routines.time))
+                    .map(item => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: #f8fafc; border-radius: 6px; margin-bottom: 4px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="background: #667eea; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem;">${item.routines.time}</span>
+                                <span style="font-weight: 500;">${item.routines.name}</span>
+                                <span style="background: #e2e8f0; color: #4a5568; padding: 2px 6px; border-radius: 8px; font-size: 0.7rem;">${this.getCategoryName(item.routines.category)}</span>
+                            </div>
+                            <small style="color: #999;">${new Date(item.completed_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</small>
+                        </div>
+                    `).join('');
+
+                return `
+                    <div style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden;">
+                        <div style="background: #667eea; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${formattedDate}</strong>
+                                <span style="margin-left: 8px; opacity: 0.8;">${dayName}</span>
+                            </div>
+                            <span style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 0.8rem;">
+                                ${dayData.length}개 완료
+                            </span>
+                        </div>
+                        <div style="padding: 12px;">
+                            ${routinesHTML}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+        modalContent.innerHTML = `
+            <h2 style="margin-bottom: 20px; color: #333;">📅 일자별 루틴 이력</h2>
+            <div style="margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #667eea;">${totalDays}</div>
+                    <div style="font-size: 0.9rem; color: #666;">활동한 날</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #48bb78;">${totalCompletions}</div>
+                    <div style="font-size: 0.9rem; color: #666;">총 완료 횟수</div>
+                </div>
+                <div style="text-align: center; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                    <div style="font-size: 1.5rem; font-weight: bold; color: #ed8936;">${averagePerDay}</div>
+                    <div style="font-size: 0.9rem; color: #666;">일평균 완료</div>
+                </div>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                ${historyHTML || '<div style="text-align: center; padding: 40px; color: #666;">최근 30일간 완료 기록이 없습니다.</div>'}
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="this.closest('.daily-history-modal').remove()" 
+                        style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                    닫기
+                </button>
+            </div>
+        `;
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
+    // 카테고리 이름 반환
+    getCategoryName(category) {
+        const categoryNames = {
+            morning: '아침',
+            work: '업무',
+            exercise: '운동',
+            study: '공부',
+            evening: '저녁',
+            other: '기타'
+        };
+        return categoryNames[category] || category;
     }
 
     // 주간 통계 조회
