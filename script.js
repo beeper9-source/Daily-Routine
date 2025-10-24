@@ -160,7 +160,7 @@ class RoutineManager {
         if (!routine) return;
 
         const isCurrentlyCompleted = routine.completed;
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+        const today = this.getKoreanDateString(); // 한국 시간 기준 YYYY-MM-DD 형식
 
         try {
             if (!isCurrentlyCompleted) {
@@ -183,7 +183,7 @@ class RoutineManager {
                     .insert({
                         routine_id: routineId,
                         completion_date: today,
-                        completed_at: new Date().toISOString(),
+                        completed_at: this.getKoreanTimeString(),
                         notes: null
                     });
 
@@ -405,7 +405,7 @@ class RoutineManager {
         try {
             // 오늘 날짜의 완료 이력을 로드
             console.log('루틴 완료 상태 로드 시작');
-            const today = new Date().toISOString().split('T')[0];
+            const today = this.getKoreanDateString();
             
             // routine_completions 테이블에서 오늘 날짜의 완료 이력 조회
             const { data, error } = await this.supabase
@@ -445,7 +445,7 @@ class RoutineManager {
     // routines 테이블에서 완료 상태 로드 (fallback)
     loadRoutineCompletionsFromRoutines() {
         this.routineCompletions.clear();
-        const today = new Date().toISOString().split('T')[0];
+        const today = this.getKoreanDateString();
         
         this.routines.forEach(routine => {
             if (routine.completed) {
@@ -581,7 +581,7 @@ class RoutineManager {
     // 메모 로드
     async loadMemo() {
         try {
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+            const today = this.getKoreanDateString(); // 한국 시간 기준 YYYY-MM-DD 형식
             
             const { data, error } = await this.supabase
                 .from('daily_memos')
@@ -606,7 +606,7 @@ class RoutineManager {
         if (!memoTextarea) return;
 
             this.memo = memoTextarea.value;
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+        const today = this.getKoreanDateString(); // 한국 시간 기준 YYYY-MM-DD 형식
 
         try {
             const { error } = await this.supabase
@@ -637,7 +637,7 @@ class RoutineManager {
             const memoTextarea = document.getElementById('daily-memo');
             if (!memoTextarea) return;
 
-            const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+            const today = this.getKoreanDateString(); // 한국 시간 기준 YYYY-MM-DD 형식
 
             try {
                 const { error } = await this.supabase
@@ -675,7 +675,7 @@ class RoutineManager {
         if (!memoTextarea) return;
 
             this.memo = memoTextarea.value;
-        const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
+        const today = this.getKoreanDateString(); // 한국 시간 기준 YYYY-MM-DD 형식
 
         try {
             await this.supabase
@@ -700,7 +700,7 @@ class RoutineManager {
             // 최근 30일간의 완료 이력 조회
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+            const startDate = this.getKoreanDateString(thirtyDaysAgo);
 
             const { data, error } = await this.supabase
                 .from('routine_completions')
@@ -729,7 +729,7 @@ class RoutineManager {
             // 최근 30일간의 모든 루틴 완료 이력 조회
             const thirtyDaysAgo = new Date();
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-            const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+            const startDate = this.getKoreanDateString(thirtyDaysAgo);
 
             const { data, error } = await this.supabase
                 .from('routine_completions')
@@ -821,7 +821,7 @@ class RoutineManager {
                         <strong>${new Date(item.completion_date).toLocaleDateString('ko-KR')}</strong>
                         ${item.notes ? `<br><small style="color: #666;">${item.notes}</small>` : ''}
                     </div>
-                    <small style="color: #999;">${new Date(item.completed_at).toLocaleTimeString('ko-KR')}</small>
+                    <small style="color: #999;">${this.formatKoreanTime(item.completed_at)}</small>
                 </div>
             `).join('')
             : '<div style="text-align: center; padding: 20px; color: #666;">최근 30일간 완료 기록이 없습니다.</div>';
@@ -910,7 +910,7 @@ class RoutineManager {
                                 <span style="font-weight: 500;">${item.routines.name}</span>
                                 <span style="background: #e2e8f0; color: #4a5568; padding: 2px 6px; border-radius: 8px; font-size: 0.7rem;">${this.getCategoryName(item.routines.category)}</span>
                             </div>
-                            <small style="color: #999;">${new Date(item.completed_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</small>
+                            <small style="color: #999;">${this.formatKoreanTime(item.completed_at)}</small>
                         </div>
                     `).join('');
 
@@ -983,13 +983,41 @@ class RoutineManager {
         return categoryNames[category] || category;
     }
 
+    // 한국 시간 문자열 반환 (ISO 형식)
+    getKoreanTimeString() {
+        const now = new Date();
+        // 한국 시간으로 변환 (UTC+9)
+        const koreanTime = new Date(now.getTime() + (9 * 60 * 60 * 1000));
+        return koreanTime.toISOString();
+    }
+
+    // 한국 시간으로 포맷된 날짜 문자열 반환 (YYYY-MM-DD)
+    getKoreanDateString(date = null) {
+        const targetDate = date || new Date();
+        // 한국 시간으로 변환 (UTC+9)
+        const koreanTime = new Date(targetDate.getTime() + (9 * 60 * 60 * 1000));
+        return koreanTime.toISOString().split('T')[0];
+    }
+
+    // 한국 시간으로 포맷된 시간 문자열 반환 (HH:MM)
+    formatKoreanTime(isoString) {
+        const date = new Date(isoString);
+        // 한국 시간으로 변환 (UTC+9)
+        const koreanTime = new Date(date.getTime() + (9 * 60 * 60 * 1000));
+        return koreanTime.toLocaleTimeString('ko-KR', { 
+            hour: '2-digit', 
+            minute: '2-digit',
+            timeZone: 'Asia/Seoul'
+        });
+    }
+
     // 주간 통계 조회
     async showWeeklyStats() {
         try {
             const oneWeekAgo = new Date();
             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            const startDate = oneWeekAgo.toISOString().split('T')[0];
-            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = this.getKoreanDateString(oneWeekAgo);
+            const endDate = this.getKoreanDateString();
 
             const { data, error } = await this.supabase
                 .from('routine_completions')
@@ -1020,8 +1048,8 @@ class RoutineManager {
         try {
             const oneMonthAgo = new Date();
             oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-            const startDate = oneMonthAgo.toISOString().split('T')[0];
-            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = this.getKoreanDateString(oneMonthAgo);
+            const endDate = this.getKoreanDateString();
 
             const { data, error } = await this.supabase
                 .from('routine_completions')
