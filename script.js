@@ -691,6 +691,133 @@ class RoutineManager {
         }
     }
 
+    // 과거 메모 보기
+    async showMemoHistory() {
+        try {
+            // 최근 30일간의 메모 조회
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const startDate = this.getKoreanDateString(thirtyDaysAgo);
+
+            const { data, error } = await this.supabase
+                .from('daily_memos')
+                .select('date, memo')
+                .gte('date', startDate)
+                .order('date', { ascending: false });
+
+            if (error) {
+                console.error('메모 이력 조회 중 오류:', error);
+                this.showNotification('메모 이력 조회 중 오류가 발생했습니다.', 'error');
+                return;
+            }
+
+            // 메모 이력 모달 표시
+            this.showMemoHistoryModal(data || []);
+        } catch (error) {
+            console.error('메모 이력 조회 중 예외:', error);
+            this.showNotification('메모 이력 조회 중 오류가 발생했습니다.', 'error');
+        }
+    }
+
+    // 메모 이력 모달 표시
+    showMemoHistoryModal(memoData) {
+        // 기존 모달이 있다면 제거
+        const existingModal = document.querySelector('.memo-history-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // 모달 생성
+        const modal = document.createElement('div');
+        modal.className = 'memo-history-modal';
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        `;
+
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        `;
+
+        // 메모 데이터가 있는지 확인
+        const hasMemos = memoData.length > 0;
+
+        if (!hasMemos) {
+            modalContent.innerHTML = `
+                <h2 style="margin-bottom: 20px; color: #333;">📚 과거 메모</h2>
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    최근 30일간 저장된 메모가 없습니다.
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="this.closest('.memo-history-modal').remove()" 
+                            style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                        닫기
+                    </button>
+                </div>
+            `;
+        } else {
+            // 메모 목록 HTML 생성
+            const memoHTML = memoData.map(item => {
+                const dateObj = new Date(item.date);
+                const dayName = dateObj.toLocaleDateString('ko-KR', { weekday: 'short' });
+                const formattedDate = dateObj.toLocaleDateString('ko-KR');
+                const memoText = item.memo ? item.memo.replace(/\n/g, '<br>') : '(메모 없음)';
+                
+                return `
+                    <div style="padding: 15px; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 15px; background: #f8fafc;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <strong style="color: #667eea; font-size: 1.1rem;">${formattedDate}</strong>
+                            <span style="background: #e2e8f0; color: #4a5568; padding: 4px 10px; border-radius: 12px; font-size: 0.8rem;">${dayName}</span>
+                        </div>
+                        <div style="color: #4a5568; line-height: 1.6; white-space: pre-wrap;">${memoText}</div>
+                    </div>
+                `;
+            }).join('');
+
+            modalContent.innerHTML = `
+                <h2 style="margin-bottom: 20px; color: #333;">📚 과거 메모</h2>
+                <div style="margin-bottom: 20px; padding: 15px; background: #f8fafc; border-radius: 10px;">
+                    <strong>총 ${memoData.length}개의 메모가 있습니다.</strong>
+                </div>
+                <div style="max-height: 400px; overflow-y: auto;">
+                    ${memoHTML}
+                </div>
+                <div style="text-align: center; margin-top: 20px;">
+                    <button onclick="this.closest('.memo-history-modal').remove()" 
+                            style="background: #667eea; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer;">
+                        닫기
+                    </button>
+                </div>
+            `;
+        }
+
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+
+        // 모달 외부 클릭 시 닫기
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+    }
+
     // 루틴 이력 조회
     async showRoutineHistory(routineId) {
         const routine = this.routines.find(r => r.id === routineId);

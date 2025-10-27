@@ -73,6 +73,16 @@ body {
     box-shadow: 0 5px 15px rgba(252, 129, 129, 0.4);
 }
 
+.btn-view-history {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-view-history:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
 /* 모바일 최적화 */
 @media (max-width: 768px) {
     .memo-actions {
