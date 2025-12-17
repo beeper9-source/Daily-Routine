@@ -58,6 +58,9 @@ body {
     font-size: 20px;
     width: 80px;
     white-space: nowrap;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .btn-save-memo {
@@ -93,14 +96,19 @@ body {
 /* 모바일 최적화 */
 @media (max-width: 768px) {
     .memo-actions {
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: nowrap;
     }
     
     .memo-actions .btn {
         height: 30px;
         font-size: 20px;
         width: 80px;
+        min-width: 80px;
         white-space: nowrap;
+        flex-shrink: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     #daily-memo {
