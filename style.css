@@ -53,6 +53,11 @@ body {
     justify-content: flex-end;
 }
 
+.memo-actions .btn {
+    height: 40px;
+    font-size: 20px;
+}
+
 .btn-save-memo {
     background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
     color: white;
@@ -394,7 +399,7 @@ button[type="submit"]:hover {
 }
 
 .routine-name {
-    font-size: 0.9rem;
+    font-size: 20px;
     font-weight: 600;
     color: #2d3748;
     white-space: nowrap;
@@ -473,12 +478,14 @@ button[type="submit"]:hover {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.65rem;
+    font-size: 20px;
     font-weight: 500;
     transition: all 0.3s ease;
     white-space: nowrap;
     flex-shrink: 0;
     min-width: auto;
+    height: 30px;
+    width: 80px;
 }
 
 /* 모바일 최적화 */

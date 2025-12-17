@@ -340,10 +340,6 @@ class RoutineManager {
             <div class="routine-card ${isCompleted ? 'completed' : ''}">
                 <div class="routine-header">
                     <div class="routine-name">${routine.name}</div>
-                    <div class="routine-category">
-                        ${categoryEmojis[routine.category]} ${categoryNames[routine.category]}
-                    </div>
-                    <div class="routine-time">${routine.time}</div>
                 </div>
                 <div class="routine-actions">
                     <button class="btn btn-complete" onclick="routineManager.toggleComplete(${routine.id})">
